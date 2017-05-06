@@ -14,6 +14,7 @@ namespace LinqTutorial
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Linq.Expressions;
     using System.Runtime.CompilerServices;
 
     public class Program
@@ -89,6 +90,111 @@ namespace LinqTutorial
             this.SkipSkipWhile();
             this.TakeTakeWhile();
             this.AsEnumerableCastToListToDictionaryToArray();
+            this.LambdaExpression();
+            this.ExpressionTree();
+            this.let();
+            this.into();
+        }
+
+        private void into()
+        {
+            Print(this.GetCurrentMethod());
+
+            var teenAgerStudents = from s in this.StudentList
+                                   where s.Age > 12 && s.Age < 60
+                                   select s
+                                       into teenStudents
+                                   where teenStudents.StudentName.StartsWith("B")
+                                   select teenStudents.StudentName;
+
+            foreach (var teenAgerStudent in teenAgerStudents)
+            {
+                Console.WriteLine(teenAgerStudent);
+            }
+        }
+
+        private void let()
+        {
+            Print(this.GetCurrentMethod());
+
+            var lowercaseStudentNames = from s in this.StudentList
+                                        where s.StudentName.ToLower().StartsWith("r")
+                                        select s.StudentName.ToLower();
+
+            var lowercaseStudentNamesWithLet = from s in this.StudentList
+                                               let lowercaseStudentName = s.StudentName.ToLower()
+                                               where lowercaseStudentName.StartsWith("r")
+                                               select lowercaseStudentName;
+
+            foreach (var name in lowercaseStudentNamesWithLet)
+            {
+                Console.WriteLine(name);
+            }
+        }
+
+        private void ExpressionTree()
+        {
+            Print(this.GetCurrentMethod());
+
+            // To create the expression tree, first of all, create a parameter expression where Student is the type of the parameter and 's' is the name of the parameter as below:
+            ParameterExpression pe = Expression.Parameter(typeof(Student), "student");
+
+            // Now, use Expression.Property() to create s.Age expression where s is the parameter and Age is the property name of Student. (Expression is an abstract class that contains static helper methods to create the Expression tree manually.)
+            MemberExpression me = Expression.Property(pe, "Age");
+
+            // Now, create a constant expression for 18:
+            ConstantExpression constant = Expression.Constant(18, typeof(int));
+
+            // Till now, we have built expression trees for s.Age(member expression) and 18(constant expression).We now need to check whether a member expression is greater than a constant expression or not.For that, use the Expression.GreaterThanOrEqual() method and pass the member expression and constant expression as parameters:
+            BinaryExpression body = Expression.LessThanOrEqual(me, constant);
+
+            // Thus, we have built an expression tree for a lambda expression body s.Age >= 18.We now need to join the parameter and body expressions.Use Expression.Lambda(body, parameters array) to join the body and parameter part of the lambda expression s => s.age >= 18:
+            var isAdultExprTree = Expression.Lambda<Func<Student, bool>>(body, new[] { pe });
+
+            Console.WriteLine("Expression Tree: {0}", isAdultExprTree);
+
+            Console.WriteLine("Expression Tree Body: {0}", isAdultExprTree.Body);
+
+            Console.WriteLine("Number of Parameters in Expression Tree: {0}", isAdultExprTree.Parameters.Count);
+
+            Console.WriteLine("Parameters in Expression Tree: {0}", isAdultExprTree.Parameters[0]);
+
+            Expression<Func<Student, bool>> isTeenAgerExpr = s => s.Age > 12 && s.Age < 20;
+
+            Console.WriteLine("Expression: {0}", isTeenAgerExpr);
+
+            Console.WriteLine("Expression Type: {0}", isTeenAgerExpr.NodeType);
+
+            var parameters = isTeenAgerExpr.Parameters;
+
+            foreach (var param in parameters)
+            {
+                Console.WriteLine("Parameter Name: {0}", param.Name);
+                Console.WriteLine("Parameter Type: {0}", param.Type.Name);
+            }
+            var bodyExpr = isTeenAgerExpr.Body as BinaryExpression;
+
+            Console.WriteLine("Left side of body expression: {0}", bodyExpr.Left);
+            Console.WriteLine("Binary Expression Type: {0}", bodyExpr.NodeType);
+            Console.WriteLine("Right side of body expression: {0}", bodyExpr.Right);
+            Console.WriteLine("Return Type: {0}", isTeenAgerExpr.ReturnType);
+        }
+
+        private void LambdaExpression()
+        {
+            Print(this.GetCurrentMethod());
+
+            Expression<Func<Student, bool>> isTeenAgerExpr = s => s.Age > 12 && s.Age < 20;
+
+            Console.WriteLine(isTeenAgerExpr);
+
+            //compile Expression using Compile method to invoke it as Delegate
+            Func<Student, bool> isTeenAger = isTeenAgerExpr.Compile();
+            Console.WriteLine(isTeenAger);
+
+            //Invoke
+            bool result = isTeenAger(new Student() { StudentID = 1, StudentName = "Steve", Age = 20 });
+            Console.WriteLine(result);
         }
 
         // The Conversion operators in LINQ are useful in converting the type of the elements in a sequence(collection).
