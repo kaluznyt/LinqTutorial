@@ -12,7 +12,9 @@ namespace LinqTutorial
     using System;
     using System.Collections;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
+    using System.Runtime.CompilerServices;
 
     public class Program
     {
@@ -39,6 +41,24 @@ namespace LinqTutorial
             new Program().Run();
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public string GetCurrentMethod()
+        {
+            StackTrace st = new StackTrace();
+            StackFrame sf = st.GetFrame(1);
+
+            return sf.GetMethod().Name;
+        }
+
+        private static void Print(string currentMethod)
+        {
+            var line = "######################################################";
+            Console.WriteLine();
+            Console.WriteLine(line);
+            Console.WriteLine("{0," + (line.Length / 2 + currentMethod.Length / 2) + "}", currentMethod);
+            Console.WriteLine(line);
+        }
+
         private void Run()
         {
             this.Where();
@@ -61,18 +81,285 @@ namespace LinqTutorial
             this.SequenceEqual();
             this.Concat();
             this.DefaultIfEmpty();
+            this.EmptyRangeRepeat();
+            this.Distinct();
+            this.Except();
+            this.Intersect();
+            this.Union();
+            this.SkipSkipWhile();
+            this.TakeTakeWhile();
+            this.AsEnumerableCastToListToDictionaryToArray();
+        }
+
+        // The Conversion operators in LINQ are useful in converting the type of the elements in a sequence(collection).
+        // There are three types of conversion operators: As operators(AsEnumerable and AsQueryable), 
+        // To operators(ToArray, ToDictionary, ToList and ToLookup), and Casting operators(Cast and OfType).
+
+        // The AsEnumerable and AsQueryable methods cast or convert a source object to IEnumerable<T> or IQueryable<T> respectively.
+        private void AsEnumerableCastToListToDictionaryToArray()
+        {
+            Print(this.GetCurrentMethod());
+
+            Student[] studentArray =
+                {
+                    new Student() { StudentID = 1, StudentName = "John", Age = 18 },
+                    new Student() { StudentID = 2, StudentName = "Steve", Age = 21 },
+                    new Student() { StudentID = 3, StudentName = "Bill", Age = 25 },
+                    new Student() { StudentID = 4, StudentName = "Ram", Age = 20 },
+                    new Student() { StudentID = 5, StudentName = "Ron", Age = 31 },
+                };
+
+            ReportTypeProperties(studentArray);
+            ReportTypeProperties(studentArray.AsEnumerable());
+            ReportTypeProperties(studentArray.AsQueryable());
+
+            // studentArray.Cast<Student>() is the same as (IEnumerable<Student>)studentArray but Cast<Student>() is more readable.
+            ReportTypeProperties(studentArray);
+            ReportTypeProperties((IEnumerable<Student>)studentArray);
+            ReportTypeProperties(studentArray.Cast<Student>());
+
+            // To operators force the execution of the query. It forces the remote query provider to execute 
+            // a query and get the result from the underlying data source e.g.SQL Server database.
+            var strList = new List<string>() { "One", "Two", "Three", "Four", "Three" };
+
+            var strArray = strList.ToArray<string>(); // converts List to Array
+
+            var list = strArray.ToList<string>(); // converts array into list
+
+            // following converts list into dictionary where StudentId is a key
+            var studentDict = this.StudentList.ToDictionary<Student, int>(s => s.StudentID);
+
+            foreach (var key in studentDict.Keys)
+            {
+                Console.WriteLine("Key: {0}, Value: {1}", key, (studentDict[key] as Student).StudentName);
+            }
+        }
+
+        static void ReportTypeProperties<T>(T obj)
+        {
+            Console.WriteLine("Compile-time type: {0}", typeof(T).Name);
+            Console.WriteLine("Actual type: {0}", obj.GetType().Name);
+        }
+
+        // Take Takes elements up to a specified position starting from the first element in a sequence.
+        // TakeWhile Returns elements from the first element until an element does not satisfy the condition.If the first element itself doesn't satisfy the condition then returns an empty collection.
+        private void TakeTakeWhile()
+        {
+            Print(this.GetCurrentMethod());
+
+            var strList = new List<string>() { "One", "Two", "Three", "Four", "Five" };
+
+            var newList = strList.Take(2);
+
+            foreach (var str in newList)
+                Console.WriteLine(str);
+
+            var result = strList.TakeWhile(s => s.Length < 4);
+
+            foreach (string str in result)
+                Console.WriteLine(str);
+
+            var resultList = strList.TakeWhile((s, i) => s.Length > i);
+
+            foreach (string str in resultList)
+                Console.WriteLine(str);
+        }
+
+        // Partitioning operators split the sequence(collection) into two parts and return one of the parts.
+        // Skip Skips elements up to a specified position starting from the first element in a sequence.
+        // SkipWhile   Skips elements based on a condition until an element does not satisfy the condition. If the first element itself doesn't satisfy the condition, it then skips 0 elements and returns all the elements in the sequence.
+        private void SkipSkipWhile()
+        {
+            Print(this.GetCurrentMethod());
+
+            var strList = new List<string>() { "One", "Two", "Three", "Four", "Five", "Six" };
+
+            var newList = strList.Skip(2);
+
+            foreach (var str in newList) Console.WriteLine(str);
+
+            var resultList = strList.SkipWhile(s => s.Length < 4);
+
+            foreach (string str in resultList) Console.WriteLine(str);
+
+            var result = strList.SkipWhile((s, i) => s.Length > i);
+
+            foreach (string str in result)
+                Console.WriteLine(str);
+
+        }
+
+        // The Union extension method requires two collections and returns a new collection that 
+        // includes distinct elements from both the collections.Consider the following example.
+        private void Union()
+        {
+            Print(this.GetCurrentMethod());
+
+            IList<string> strList1 = new List<string>() { "One", "Two", "three", "Four" };
+            IList<string> strList2 = new List<string>() { "Two", "THREE", "Four", "Five" };
+
+            var result = strList1.Union(strList2);
+
+            foreach (string str in result)
+                Console.WriteLine(str);
+
+        }
+
+        // The Intersect extension method requires two collections.
+        // It returns a new collection that includes common elements that exists in both the collection.Consider the following example.
+        private void Intersect()
+        {
+            Print(this.GetCurrentMethod());
+
+            var strList1 = new List<string>() { "One", "Two", "Three", "Four", "Five" };
+            var strList2 = new List<string>() { "Four", "Five", "Six", "Seven", "Eight" };
+
+            var result = strList1.Intersect(strList2);
+
+            foreach (string str in result)
+                Console.WriteLine(str);
+        }
+
+        // The Except() method requires two collections.It returns a new collection with elements from the 
+        // first collection which do not exist in the second collection(parameter collection).
+        private void Except()
+        {
+            Print(this.GetCurrentMethod());
+
+            var strList1 = new List<string>() { "One", "Two", "Three", "Four", "Five" };
+            var strList2 = new List<string>() { "Four", "Five", "Six", "Seven", "Eight" };
+
+            var result = strList1.Except(strList2);
+
+            foreach (string str in result)
+                Console.WriteLine(str);
+
+        }
+
+        // The Distinct extension method returns a new collection of unique elements from the given collection.
+        // The Distinct extension method doesn't compare values of complex type objects. 
+        // You need to implement IEqualityComparer<T> interface in order to compare the values of complex types. 
+        // In the following example, StudentComparer class implements IEqualityComparer<Student> to compare Student objects.
+        private void Distinct()
+        {
+            Print(this.GetCurrentMethod());
+
+            var strList = new List<string>() { "One", "Two", "Three", "Two", "Three" };
+
+            var intList = new List<int>() { 1, 2, 3, 2, 4, 4, 3, 5 };
+
+            var distinctList1 = strList.Distinct();
+
+            foreach (var str in distinctList1)
+                Console.WriteLine(str);
+
+            var distinctList2 = intList.Distinct();
+
+            foreach (var i in distinctList2)
+                Console.WriteLine(i);
+
+            var studentList = new List<Student>() {
+                        new Student() { StudentID = 1, StudentName = "John", Age = 18 } ,
+                        new Student() { StudentID = 2, StudentName = "Steve",  Age = 15 } ,
+                        new Student() { StudentID = 3, StudentName = "Bill",  Age = 25 } ,
+                        new Student() { StudentID = 3, StudentName = "Bill",  Age = 25 } ,
+                        new Student() { StudentID = 3, StudentName = "Bill",  Age = 25 } ,
+                        new Student() { StudentID = 3, StudentName = "Bill",  Age = 25 } ,
+                        new Student() { StudentID = 5, StudentName = "Ron" , Age = 19 }
+                    };
+
+
+            var distinctStudents = studentList.Distinct(new Student.StudentComparer());
+
+            foreach (Student std in distinctStudents)
+                Console.WriteLine(std.StudentName);
+        }
+
+        // LINQ includes generation operators DefaultIfEmpty, Empty, Range & Repeat.The Empty, 
+        // Range & Repeat methods are not extension methods for IEnumerable or IQueryable but they are simply static methods defined in a static class Enumerable.
+        // Empty Returns an empty collection
+        // Range   Generates collection of IEnumerable<T> type with specified number of elements with sequential values, starting from first element.
+        // Repeat Generates a collection of IEnumerable<T> type with specified number of elements and each element contains same specified value.
+        private void EmptyRangeRepeat()
+        {
+            Print(this.GetCurrentMethod());
+
+            var emptyCollection1 = Enumerable.Empty<string>();
+            var emptyCollection2 = Enumerable.Empty<Student>();
+
+            Console.WriteLine("Count: {0} ", emptyCollection1.Count());
+            Console.WriteLine("Type: {0} ", emptyCollection1.GetType().Name);
+
+            Console.WriteLine("Count: {0} ", emptyCollection2.Count());
+            Console.WriteLine("Type: {0} ", emptyCollection2.GetType().Name);
+
+            var intCollection = Enumerable.Range(10, 10);
+            Console.WriteLine("Total Count: {0} ", intCollection.Count());
+
+            for (int i = 0; i < intCollection.Count(); i++)
+                Console.WriteLine("Value at index {0} : {1}", i, intCollection.ElementAt(i));
+
+            var intCollection2 = Enumerable.Repeat<int>(10, 10);
+            Console.WriteLine("Total Count: {0} ", intCollection2.Count());
+
+            for (int i = 0; i < intCollection2.Count(); i++)
+                Console.WriteLine("Value at index {0} : {1}", i, intCollection2.ElementAt(i));
+
+
         }
 
         // The DefaultIfEmpty() method returns a new collection with the default value if the given 
         // collection on which DefaultIfEmpty() is invoked is empty.
+        // Another overload method of DefaultIfEmpty() takes a value parameter that should be replaced with default value.
         private void DefaultIfEmpty()
         {
+            Print(this.GetCurrentMethod());
+
+            var emptyList = new List<string>();
+
+            var newList1 = emptyList.DefaultIfEmpty();
+            var newList2 = emptyList.DefaultIfEmpty("None");
+
+            Console.WriteLine("Count: {0}", newList1.Count());
+            Console.WriteLine("Value: {0}", newList1.ElementAt(0));
+
+            Console.WriteLine("Count: {0}", newList2.Count());
+            Console.WriteLine("Value: {0}", newList2.ElementAt(0));
+
+            var emptyList2 = new List<int>();
+
+            var newList3 = emptyList2.DefaultIfEmpty();
+            var newList4 = emptyList2.DefaultIfEmpty(100);
+
+            Console.WriteLine("Count: {0}", newList3.Count());
+            Console.WriteLine("Value: {0}", newList3.ElementAt(0));
+
+            Console.WriteLine("Count: {0}", newList4.Count());
+            Console.WriteLine("Value: {0}", newList4.ElementAt(0));
+
+            var emptyStudentList = new List<Student>();
+
+            var newStudentList1 = emptyStudentList.DefaultIfEmpty(new Student());
+
+            var newStudentList2 = emptyStudentList.DefaultIfEmpty(new Student()
+            {
+                StudentID = 0,
+                StudentName = ""
+            });
+
+            Console.WriteLine("Count: {0} ", newStudentList1.Count());
+            Console.WriteLine("Student ID: {0} ", newStudentList1.ElementAt(0));
+
+            Console.WriteLine("Count: {0} ", newStudentList2.Count());
+            Console.WriteLine("Student ID: {0} ", newStudentList2.ElementAt(0).StudentID);
 
         }
 
         // The Concat() method appends two sequences of the same type and returns a new sequence(collection).
         private void Concat()
         {
+            Print(this.GetCurrentMethod());
+
             var collection1 = new List<string>() { "One", "Two", "Three" };
             var collection2 = new List<string>() { "Five", "Six" };
 
@@ -88,6 +375,8 @@ namespace LinqTutorial
         // if the objects have the same reference then they considered as equal otherwise they are considered not equal.
         private void SequenceEqual()
         {
+            Print(this.GetCurrentMethod());
+
             var strList1 = new List<string>() { "One", "Two", "Three", "Four", "Three" };
             var strList2 = new List<string>() { "One", "Two", "Three", "Four", "Three" };
             var isEqual = strList1.SequenceEqual(strList2); // returns true
@@ -126,6 +415,8 @@ namespace LinqTutorial
         // InvalidOperationException if it found more than one element for the specified condition in the collection.
         private void SingleOrDefault()
         {
+            Print(this.GetCurrentMethod());
+
             var oneElementList = new List<int>() { 7 };
             var intList = new List<int>() { 7, 10, 21, 30, 45, 50, 87 };
             IList<string> strList = new List<string>() { null, "Two", "Three", "Four", "Five" };
@@ -229,6 +520,8 @@ namespace LinqTutorial
         // Returns a default value if no such element exists.
         private void LastOrDefault()
         {
+            Print(this.GetCurrentMethod());
+
             var intList = new List<int>() { 7, 10, 21, 30, 45, 50, 87 };
             var strList = new List<string>() { null, "Two", "Three", "Four", "Five" };
             var emptyList = new List<string>();
@@ -286,6 +579,8 @@ namespace LinqTutorial
         // FirstOrDefault Returns the first element of a collection, or the first element that satisfies a condition.Returns a default value if index is out of range.
         private void FirstOrDefault()
         {
+            Print(this.GetCurrentMethod());
+
             var intList = new List<int>() { 7, 10, 21, 30, 45, 50, 87 };
             var strList = new List<string>() { null, "Two", "Three", "Four", "Five" };
             var emptyList = new List<string>();
@@ -339,6 +634,8 @@ namespace LinqTutorial
         // ElementAtOrDefault Returns the element at a specified index in a collection or a default value if the index is out of range.
         private void ElementAt()
         {
+            Print(this.GetCurrentMethod());
+
             var intList = new List<int>() { 10, 21, 30, 45, 50, 87 };
             var strList = new List<string>() { "One", "Two", null, "Four", "Five" };
 
@@ -369,6 +666,8 @@ namespace LinqTutorial
         // The Sum() method calculates the sum of numeric items in the collection.
         private void Sum()
         {
+            Print(this.GetCurrentMethod());
+
             var intList = new List<int>() { 10, 21, 30, 45, 50, 87 };
 
             var total = intList.Sum();
@@ -391,6 +690,8 @@ namespace LinqTutorial
         // The Max operator returns the largest numeric element from a collection.
         private void Max()
         {
+            Print(this.GetCurrentMethod());
+
             var intList = new List<int>() { 10, 21, 30, 45, 50, 87 };
 
             var largest = intList.Max();
@@ -410,6 +711,8 @@ namespace LinqTutorial
         // or number of elements that have satisfied the given condition.
         private void Count()
         {
+            Print(this.GetCurrentMethod());
+
             var numOfStudents = this.StudentList.Count();
 
             Console.WriteLine("Number of Students: {0}", numOfStudents);
@@ -431,6 +734,8 @@ namespace LinqTutorial
         // Average method returns nullable or non-nullable decimal, double or float value.
         private void Average()
         {
+            Print(this.GetCurrentMethod());
+
             var intList = new List<int>() { 10, 20, 30 };
 
             var avg = intList.Average();
@@ -446,6 +751,8 @@ namespace LinqTutorial
         // Count, Max, Min and Sum, on the numeric property of the elements in the collection.
         private void Aggregate()
         {
+            Print(this.GetCurrentMethod());
+
             var strList = new List<string>() { "One", "Two", "Three", "Four", "Five" };
 
             var commaSeperatedString = strList.Aggregate((accumulator, currentItem) =>
@@ -488,6 +795,8 @@ namespace LinqTutorial
         // Quantifier operators are Not Supported with C# query syntax.
         private void AllAnyContain()
         {
+            Print(this.GetCurrentMethod());
+
             // checks whether all the students are teenagers    
             var areAllStudentsTeenAger = this.StudentList.All(s => s.Age > 12 && s.Age < 20);
 
@@ -525,6 +834,8 @@ namespace LinqTutorial
         // The SelectMany operator projects sequences of values that are based on a transform function and then flattens them into one sequence.
         private void Select()
         {
+            Print(this.GetCurrentMethod());
+
             var selectResultString = from s in this.StudentList
                                      select s.StudentName;
 
@@ -551,6 +862,7 @@ namespace LinqTutorial
         // key and groups the result by matching key and then returns the collection of grouped result and key.
         private void GroupJoin()
         {
+            Print(this.GetCurrentMethod());
 
             var groupJoinMethod = this.StandardList.GroupJoin(
                 this.StudentList,
@@ -584,6 +896,8 @@ namespace LinqTutorial
         // specified expression.It is the same as inner join of SQL.
         private void Join()
         {
+            Print(this.GetCurrentMethod());
+
             var innerJoinMethod = this.StudentList.Join( // outer sequence
                 this.StandardList,
                 student => student.StandardID,
@@ -606,6 +920,8 @@ namespace LinqTutorial
         // overload methods, so you can use appropriate extension method based on your requirement in method syntax.
         private void GroupByToLookup()
         {
+            Print(this.GetCurrentMethod());
+
             var groupedResultQuery = from s in this.StudentList
                                      group s by s.Age;
 
@@ -645,6 +961,8 @@ namespace LinqTutorial
         // Linq will first sort the collection based on primary field which is specified by OrderBy method and then sort the resulted collection in ascending order again based on secondary field specified by ThenBy method.
         private void OrderByThenBy()
         {
+            Print(this.GetCurrentMethod());
+
             var orderByResult = from s in this.StudentList
                                 orderby s.StudentName
                                 select s;
@@ -672,7 +990,9 @@ namespace LinqTutorial
         // a collection to a specified type.
         private void OfType()
         {
-            IList mixedList = new ArrayList();
+            Print(this.GetCurrentMethod());
+
+            var mixedList = new ArrayList();
             mixedList.Add(0);
             mixedList.Add("One");
             mixedList.Add("Two");
@@ -691,7 +1011,9 @@ namespace LinqTutorial
         // expression and returns a new collection.The criteria can be specified as lambda expression or Func delegate type.
         private void Where()
         {
-            IList<string> stringList = new List<string>
+            Print(this.GetCurrentMethod());
+
+            var stringList = new List<string>
                                            {
                                                "C# Tutorials",
                                                "VB.NET Tutorials",
