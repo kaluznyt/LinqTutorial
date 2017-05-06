@@ -48,16 +48,124 @@ namespace LinqTutorial
             this.Join();
             this.GroupJoin();
             this.Select();
+            this.AllAnyContain();
+            this.Aggregate();
+            this.Average();
+            this.Count();
+        }
+
+        private void Count()
+        {
+            // The Count operator returns the number of elements in the collection 
+            // or number of elements that have satisfied the given condition.
+
+            var numOfStudents = this.StudentList.Count();
+
+            Console.WriteLine("Number of Students: {0}", numOfStudents);
+
+            var numOfMatureStudents = this.StudentList.Count(s => s.Age >= 18);
+
+            Console.WriteLine("Number of mature Students: {0}", numOfMatureStudents);
+
+            var totalAge = (from s in this.StudentList
+                            where s.Age >= 18
+                            select s.Age).Count();
+
+            Console.WriteLine("Number of mature Students: {0}", totalAge);
+        }
+
+        // Average extension method calculates the average of the numeric items in the collection.
+        // Average method returns nullable or non-nullable decimal, double or float value.
+        private void Average()
+        {
+            var intList = new List<int>() { 10, 20, 30 };
+
+            var avg = intList.Average();
+
+            Console.WriteLine("Average: {0}", avg);
+
+            var avgAge = this.StudentList.Average(s => s.Age);
+
+            Console.WriteLine("Average Age of Student: {0}", avgAge);
+        }
+
+        // The aggregation operators perform mathematical operations like Average, Aggregate, 
+        // Count, Max, Min and Sum, on the numeric property of the elements in the collection.
+        private void Aggregate()
+        {
+            var strList = new List<string>() { "One", "Two", "Three", "Four", "Five" };
+
+            var commaSeperatedString = strList.Aggregate((accumulator, currentItem) =>
+                {
+                    Console.WriteLine($"{nameof(accumulator)}:{accumulator}");
+                    Console.WriteLine($"{nameof(currentItem)}:{currentItem}");
+                    return accumulator + ", " + currentItem;
+                });
+
+            Console.WriteLine(commaSeperatedString);
+
+            var commaSeperatedStringWithSeed = strList.Aggregate(
+                "Seed: ",
+                (accumulator, currentItem) =>
+                    {
+                        Console.WriteLine($"{nameof(accumulator)}:{accumulator}");
+                        Console.WriteLine($"{nameof(currentItem)}:{currentItem}");
+                        return accumulator + currentItem + ", ";
+                    });
+
+            Console.WriteLine(commaSeperatedStringWithSeed);
+
+            var commaSeperatedStringWithSeedAndResultSelector = strList.Aggregate(
+                string.Empty,
+                (accumulator, currentItem) =>
+                    {
+                        Console.WriteLine($"{nameof(accumulator)}:{accumulator}");
+                        Console.WriteLine($"{nameof(currentItem)}:{currentItem}");
+                        return accumulator + currentItem + ", ";
+                    },
+                str => str.Substring(0, str.Length - 2));
+
+            Console.WriteLine(commaSeperatedStringWithSeedAndResultSelector);
+
         }
 
         // All Checks if all the elements in a sequence satisfies the specified condition
         // Any Checks if any of the elements in a sequence satisfies the specified condition
         // Contain Checks if the sequence contains a specific element
-        private void AllAny()
+        // Quantifier operators are Not Supported with C# query syntax.
+        private void AllAnyContain()
         {
+            // checks whether all the students are teenagers    
+            var areAllStudentsTeenAger = this.StudentList.All(s => s.Age > 12 && s.Age < 20);
 
+            Console.WriteLine(areAllStudentsTeenAger);
 
+            var isAnyStudentTeenAger = this.StudentList.Any(s => s.Age > 12 && s.Age < 20);
+
+            Console.WriteLine(isAnyStudentTeenAger);
+
+            var intList = new List<int>() { 1, 2, 3, 4, 5 };
+            var result = intList.Contains(10);  // returns false
+            Console.WriteLine(result);
+
+            var student = new Student { StudentID = 3, StudentName = "Bill" };
+            Console.WriteLine(this.StudentList.Contains(student));
+            Console.WriteLine(this.StudentList.Contains(student, new StudentComparer()));
         }
+
+        internal class StudentComparer : IEqualityComparer<Student>
+        {
+            public bool Equals(Student x, Student y)
+            {
+                return x.StudentID == y.StudentID && string.Equals(x.StudentName, y.StudentName, StringComparison.CurrentCultureIgnoreCase);
+            }
+
+            public int GetHashCode(Student obj)
+            {
+                return obj.GetHashCode();
+            }
+        }
+
 
         // The Select operator always returns an IEnumerable collection which contains elements based on a 
         // transformation function.It is similar to the Select clause of SQL that produces a flat result set.
